@@ -17,5 +17,40 @@ mix-manifest.json
 /app/*.js*
 /app/*.css*
 .vscode
-.env
 *.db
+
+# Environment and secrets
+.env
+.env.*
+*.env
+.env.local
+.env.*.local
+secrets.json
+credentials.json
+*.pem
+*.key
+*.crt
+
+# Factorio credentials and auth
+factorio-credentials.json
+player-data.json
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Backups
+*.bak
+*.backup
+*.orig
+
+# Test coverage
+coverage/
+*.cover

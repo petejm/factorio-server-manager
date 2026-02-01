@@ -1,2 +1,26 @@
+# Data directories
 /fsm-data
 /factorio-data
+
+# Secrets and credentials
+.env
+.env.*
+*.env
+secrets.json
+credentials.json
+factorio-credentials.json
+*.pem
+*.key
+*.crt
+
+# Logs
+*.log
+logs/
+
+# Database files
+*.db
+auth.leveldb*
+
+# OS files
+.DS_Store
+Thumbs.db
