@@ -42,10 +42,12 @@ This tool runs on a Factorio server and allows management of the Factorio server
 * **Mitch Roote** - [roote.ca](https://roote.ca)
 * **[knoxfighter](https://github.com/knoxfighter)**
 * **[Jannaahs](https://github.com/jannaahs)**
+* **[Pete McDade](https://github.com/petejm)**
 
 ## Special Thanks
 - **[All Contributions](https://github.com/OpenFactorioServerManager/factorio-server-manager/graphs/contributors)**
 - **mickael9** for reverseengineering the factorio-save-file: https://forums.factorio.com/viewtopic.php?f=5&t=8568#
+- **[Anthropic](https://anthropic.com)** for Claude AI assistance in modernizing and improving this codebase
 
 ## License
 
