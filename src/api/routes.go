@@ -34,6 +34,9 @@ func ServerOffMiddleware(next http.Handler) http.Handler {
 func NewRouter() *mux.Router {
 	r := mux.NewRouter().StrictSlash(true)
 
+	// Apply CSRF protection to the entire router
+	ApplyCSRFToRouter(r)
+
 	// create subrouter for authenticated calls
 	sr := r.NewRoute().Subrouter()
 	sr.Use(AuthMiddleware)
@@ -62,10 +65,17 @@ func NewRouter() *mux.Router {
 	}
 
 	// The login handler does not check for authentication.
+	// Apply rate limiting to login endpoint
 	r.Path("/api/login").
 		Methods("POST").
 		Name("LoginUser").
-		HandlerFunc(LoginUser)
+		Handler(LoginRateLimitMiddleware(http.HandlerFunc(LoginUser)))
+
+	// CSRF token endpoint - does not require authentication
+	r.Path("/api/csrf-token").
+		Methods("GET").
+		Name("CSRFToken").
+		HandlerFunc(CSRFTokenHandler)
 
 	// Route for initializing websocket connection
 	// Clients connecting to /ws establish websocket connection by upgrading

@@ -1,15 +1,15 @@
 package bootstrap
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
+	"math/big"
 	"os"
 	"path/filepath"
 	"runtime"
-	"time"
 
 	"github.com/gorilla/securecookie"
 	"github.com/jessevdk/go-flags"
@@ -95,7 +95,9 @@ func (config *Config) updateConfigFile() {
 
 	var conf Config
 	decoder := json.NewDecoder(file)
-	decoder.Decode(&conf)
+	if err := decoder.Decode(&conf); err != nil {
+		log.Printf("Error decoding config file: %s", err)
+	}
 
 	err = file.Close()
 	failOnError(err, "Error closing json file")
@@ -179,10 +181,14 @@ func (config *Config) loadServerConfig() {
 
 // Returns random port to use for rcon connection
 func randomPort() int {
-	// rand needs to be initialized, else we always get the same number
-	rand.Seed(time.Now().UnixNano())
-	// get a random number between 40000 and 45000
-	return rand.Intn(5000) + 40000
+	// Use crypto/rand for secure random port generation
+	// Get a random number between 40000 and 45000
+	n, err := rand.Int(rand.Reader, big.NewInt(5000))
+	if err != nil {
+		log.Printf("Warning: crypto/rand failed for port generation, using fallback: %s", err)
+		return 42500 // fallback to middle of range
+	}
+	return int(n.Int64()) + 40000
 }
 
 func (config *Config) mapFlags(flags Flags) {

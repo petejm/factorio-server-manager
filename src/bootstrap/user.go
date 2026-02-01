@@ -1,15 +1,17 @@
 package bootstrap
 
 import (
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"log"
+	"math/big"
+	"os"
+
 	"github.com/syndtr/goleveldb/leveldb"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"log"
-	"math/rand"
-	"os"
 )
 
 type User struct {
@@ -67,7 +69,7 @@ func MigrateLevelDBToSqlite(oldDBFile, newDBFile string) {
 	}
 	err = json.Unmarshal(oldUserData, &migrationData)
 	if err != nil {
-		log.Printf("Error unmarshalling old ")
+		log.Printf("Error unmarshalling old user data: %s", err)
 		panic(err)
 	}
 
@@ -118,12 +120,22 @@ func MigrateLevelDBToSqlite(oldDBFile, newDBFile string) {
 	}
 }
 
-var randLetters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+// randLetters includes alphanumeric characters (excluding confusing ones like 0, O, l, 1, I)
+// and special characters for stronger passwords
+var randLetters = []rune("abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%^&*()-_=+")
 
+// GenerateRandomPassword generates a cryptographically secure random password
 func GenerateRandomPassword() string {
 	pass := make([]rune, 24)
+	letterLen := big.NewInt(int64(len(randLetters)))
 	for i := range pass {
-		pass[i] = randLetters[rand.Intn(len(randLetters))]
+		n, err := rand.Int(rand.Reader, letterLen)
+		if err != nil {
+			// Fall back to a less secure method only if crypto/rand fails
+			log.Printf("Warning: crypto/rand failed, using fallback: %s", err)
+			n = big.NewInt(int64(i % len(randLetters)))
+		}
+		pass[i] = randLetters[n.Int64()]
 	}
 	return string(pass)
 }

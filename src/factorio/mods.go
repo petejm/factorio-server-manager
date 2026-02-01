@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -61,13 +61,17 @@ func ModStartUp() {
 	//create mods dir
 	if _, err = os.Stat(config.FactorioModsDir); os.IsNotExist(err) {
 		log.Println("no mods dir found ... creating one ...")
-		os.Mkdir(config.FactorioModsDir, factorioDirPerm)
+		if err := os.Mkdir(config.FactorioModsDir, factorioDirPerm); err != nil {
+			log.Printf("error creating mods dir: %s", err)
+		}
 	}
 
-	//crate mod_pack dir
+	//create mod_pack dir
 	if _, err = os.Stat(config.FactorioModPackDir); os.IsNotExist(err) {
 		log.Println("no ModPackDir found ... creating one ...")
-		_ = os.Mkdir(config.FactorioModPackDir, factorioDirPerm)
+		if err := os.Mkdir(config.FactorioModPackDir, factorioDirPerm); err != nil {
+			log.Printf("error creating ModPackDir: %s", err)
+		}
 	}
 
 	oldModpackDir := filepath.Join(config.FactorioDir, "modpacks")
@@ -114,7 +118,7 @@ func ModStartUp() {
 			}
 			newJson, _ := json.Marshal(modSimpleList)
 
-			err = ioutil.WriteFile(filepath.Join(modSimpleList.Destination, "mod-list.json"), newJson, 0664)
+			err = os.WriteFile(filepath.Join(modSimpleList.Destination, "mod-list.json"), newJson, 0664)
 			if err != nil {
 				log.Printf("error when writing new mod-list: %s", err)
 				return err
@@ -140,7 +144,7 @@ func ModStartUp() {
 				}
 				defer modFileRc.Close()
 
-				modFileBuffer, err := ioutil.ReadAll(modFileRc)
+				modFileBuffer, err := io.ReadAll(modFileRc)
 				if err != nil {
 					log.Printf("error reading mod_file_rc: %s", err)
 					return err
@@ -183,7 +187,9 @@ func ModStartUp() {
 		} else {
 			log.Printf("all modPacks are loaded into the new system successfully")
 			log.Printf("deleting old modPackDir")
-			os.RemoveAll(oldModpackDir)
+			if err := os.RemoveAll(oldModpackDir); err != nil {
+				log.Printf("error removing old modpack dir: %s", err)
+			}
 		}
 	}
 }

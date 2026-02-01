@@ -27,6 +27,12 @@ func main() {
 	// Initialize authentication system
 	api.SetupAuth()
 
+	// Initialize CSRF protection
+	api.SetupCSRF()
+
+	// Initialize rate limiter for login attempts
+	api.SetupRateLimiter()
+
 	// Initialize HTTP router -- also initializes websocket
 	router := api.NewRouter()
 

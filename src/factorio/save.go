@@ -248,7 +248,7 @@ func readOptimUint(r io.Reader, v Version, bitSize int) (uint32, error) {
 	}
 
 	if bitSize < 0 || bitSize > 64 || (bitSize%8 != 0) {
-		panic("invalid bit size")
+		return 0, fmt.Errorf("invalid bit size: %d", bitSize)
 	}
 
 	_, err := r.Read(b[:bitSize/8])
@@ -262,7 +262,7 @@ func readOptimUint(r io.Reader, v Version, bitSize int) (uint32, error) {
 	case 32:
 		return binary.LittleEndian.Uint32(b[:4]), nil
 	default:
-		panic("invalid bit size")
+		return 0, fmt.Errorf("unsupported bit size: %d", bitSize)
 	}
 }
 

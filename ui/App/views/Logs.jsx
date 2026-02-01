@@ -18,7 +18,7 @@ const Logs = () => {
             title="Logs"
             content={
                 <ul>
-                    {logs.map((log,index) => (<li key={index}>{log}</li>))}
+                    {logs.map((log, index) => (<li key={`log-${index}-${log.slice(0,20)}`}>{log}</li>))}
                 </ul>
             }
         />

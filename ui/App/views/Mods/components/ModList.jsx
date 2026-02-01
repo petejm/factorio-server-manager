@@ -19,8 +19,8 @@ const ModList = ({mods, factorioVersion, updateMod, toggleMod, deleteMod, addUpd
             <tbody>
             {
                 factorioVersion !== null && mods.map(
-                    (mod, i) =>
-                        <Mod mod={mod} key={i}
+                    (mod) =>
+                        <Mod mod={mod} key={mod.name}
                              updateMod={updateMod}
                              toggleMod={toggleMod}
                              deleteMod={deleteMod}

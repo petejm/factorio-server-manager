@@ -161,9 +161,9 @@ const Mods = ({serverStatus}) => {
                 className="mb-6"
                 content={
                     modPacks.map(
-                        (pack, i) =>
+                        (pack) =>
                             <ModPack factorioVersion={factorioVersion}
-                                     key={i}
+                                     key={pack.name}
                                      modPack={pack}
                                      reloadMods={fetchInstalledMods}
                                      reloadModPacks={fetchModPacks}

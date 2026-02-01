@@ -21,7 +21,8 @@ export const Flash = () => {
         return function () {
             Bus.removeListener('flash', flashListener);
         }
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only subscribe once on mount
 
     return (
         visibility && <div className={`bg-${color} accentuated rounded fixed bottom-0 right-0 mr-8 mb-8 px-4 py-2`}>

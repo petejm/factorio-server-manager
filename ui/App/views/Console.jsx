@@ -32,7 +32,7 @@ const Console = ({serverStatus}) => {
                 isRunning
                     ? <>
                         <ul>
-                            {logs?.map((log, i) => (<li key={i}>{log}</li>))}
+                            {logs?.map((log, i) => (<li key={`log-${i}-${log.slice(0,20)}`}>{log}</li>))}
                         </ul>
                         <Input type="text"
                                inputRef={consoleInput}

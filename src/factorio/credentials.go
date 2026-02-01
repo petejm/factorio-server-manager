@@ -3,7 +3,6 @@ package factorio
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -20,11 +19,11 @@ func (credentials *Credentials) Save() error {
 	config := bootstrap.GetConfig()
 	credentialsJson, err := json.Marshal(credentials)
 	if err != nil {
-		log.Printf("error mashalling the credentials: %s", err)
+		log.Printf("error marshalling the credentials: %s", err)
 		return err
 	}
 
-	err = ioutil.WriteFile(config.FactorioCredentialsFile, credentialsJson, 0664)
+	err = os.WriteFile(config.FactorioCredentialsFile, credentialsJson, 0600)
 	if err != nil {
 		log.Printf("error on saving the credentials. %s", err)
 		return err
@@ -40,7 +39,7 @@ func (credentials *Credentials) Load() (bool, error) {
 		return false, nil
 	}
 
-	fileBytes, err := ioutil.ReadFile(config.FactorioCredentialsFile)
+	fileBytes, err := os.ReadFile(config.FactorioCredentialsFile)
 	if err != nil {
 		credentials.Del()
 		log.Printf("error reading CredentialsFile: %s", err)
@@ -58,7 +57,7 @@ func (credentials *Credentials) Load() (bool, error) {
 		return true, nil
 	} else {
 		credentials.Del()
-		return false, errors.New("incredients incomplete")
+		return false, errors.New("credentials incomplete")
 	}
 }
 

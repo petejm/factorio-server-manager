@@ -13,6 +13,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	// SessionMaxAge is the maximum session duration in seconds (7 days)
+	SessionMaxAge = 86400 * 7
+)
+
 type User bootstrap.User
 
 type Auth struct {
@@ -36,8 +41,11 @@ func SetupAuth() {
 	}
 	sessionStore = sessions.NewCookieStore(cookieEncryptionKey)
 	sessionStore.Options = &sessions.Options{
-		Path:   "/",
-		Secure: config.Secure,
+		Path:     "/",
+		Secure:   config.Secure,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   SessionMaxAge,
 	}
 
 	auth.db, err = gorm.Open(sqlite.Open(config.SQLiteDatabaseFile), nil)
@@ -229,13 +237,19 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		username, ok := session.Values["username"]
+		usernameVal, ok := session.Values["username"]
 		if !ok {
 			http.Error(w, "Could not read username from sessioncookie", http.StatusUnauthorized)
 			return
 		}
 
-		hasUser, err := auth.hasUser(username.(string))
+		username, ok := usernameVal.(string)
+		if !ok || username == "" {
+			http.Error(w, "Invalid username in session", http.StatusUnauthorized)
+			return
+		}
+
+		hasUser, err := auth.hasUser(username)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

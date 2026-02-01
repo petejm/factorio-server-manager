@@ -3,7 +3,6 @@ package factorio
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -96,8 +95,8 @@ func (modPackMap *ModPackMap) CreateModPack(modPackName string) error {
 	config := bootstrap.GetConfig()
 	modPackFolder := filepath.Join(config.FactorioModPackDir, modPackName)
 
-	if modPackMap.CheckModPackExists(modPackName) == true {
-		log.Printf("ModPack %s already existis", modPackName)
+	if modPackMap.CheckModPackExists(modPackName) {
+		log.Printf("ModPack %s already exists", modPackName)
 		return errors.New("ModPack " + modPackName + " already exists, please choose a different name")
 	}
 
@@ -114,39 +113,17 @@ func (modPackMap *ModPackMap) CreateModPack(modPackName string) error {
 		return err
 	}
 
-	files, err := ioutil.ReadDir(config.FactorioModsDir)
+	files, err := os.ReadDir(config.FactorioModsDir)
 	if err != nil {
 		log.Printf("error on reading the factorio mods dir: %s", err)
 		return err
 	}
 
-	for _, file := range files {
-		if file.IsDir() == false {
-			sourceFilepath := filepath.Join(config.FactorioModsDir, file.Name())
-			destinationFilepath := filepath.Join(modPackFolder, file.Name())
-
-			sourceFile, err := os.Open(sourceFilepath)
-			if err != nil {
-				log.Printf("error on opening sourceFilepath: %s", err)
+	for _, entry := range files {
+		if !entry.IsDir() {
+			if err := copyModFile(config.FactorioModsDir, modPackFolder, entry.Name()); err != nil {
 				return err
 			}
-			defer sourceFile.Close()
-
-			destinationFile, err := os.Create(destinationFilepath)
-			if err != nil {
-				log.Printf("error on creating destinationFilepath: %s", err)
-				return err
-			}
-			defer destinationFile.Close()
-
-			_, err = io.Copy(destinationFile, sourceFile)
-			if err != nil {
-				log.Printf("error on copying data from source to destination: %s", err)
-				return err
-			}
-
-			sourceFile.Close()
-			destinationFile.Close()
 		}
 	}
 
@@ -165,13 +142,13 @@ func (modPackMap *ModPackMap) CreateEmptyModPack(packName string) error {
 	config := bootstrap.GetConfig()
 	modPackFolder := filepath.Join(config.FactorioModPackDir, packName)
 
-	if modPackMap.CheckModPackExists(packName) == true {
-		log.Printf("ModPack %s already existis", packName)
+	if modPackMap.CheckModPackExists(packName) {
+		log.Printf("ModPack %s already exists", packName)
 		return errors.New("ModPack " + packName + " already exists, please choose a different name")
 	}
 
-	// Create the modPack-folder
-	err = os.MkdirAll(modPackFolder, 0777)
+	// Create the modPack-folder with secure permissions
+	err = os.MkdirAll(modPackFolder, 0755)
 	if err != nil {
 		log.Printf("error creating the new ModPack directory: %s", err)
 		return err
@@ -209,6 +186,34 @@ func (modPackMap *ModPackMap) DeleteModPack(modPackName string) error {
 	err = modPackMap.reload()
 	if err != nil {
 		log.Printf("error on reloading the ModPackList: %s", err)
+		return err
+	}
+
+	return nil
+}
+
+// copyModFile copies a single file from srcDir to dstDir with proper resource cleanup
+func copyModFile(srcDir, dstDir, filename string) error {
+	sourceFilepath := filepath.Join(srcDir, filename)
+	destinationFilepath := filepath.Join(dstDir, filename)
+
+	sourceFile, err := os.Open(sourceFilepath)
+	if err != nil {
+		log.Printf("error opening source file: %s", err)
+		return err
+	}
+	defer sourceFile.Close()
+
+	destinationFile, err := os.Create(destinationFilepath)
+	if err != nil {
+		log.Printf("error creating destination file: %s", err)
+		return err
+	}
+	defer destinationFile.Close()
+
+	_, err = io.Copy(destinationFile, sourceFile)
+	if err != nil {
+		log.Printf("error copying data: %s", err)
 		return err
 	}
 

@@ -22,7 +22,6 @@ const Login = ({handleLogin}) => {
                 history.push('/');
             }
         } catch (e) {
-            console.log(e);
             window.flash("Login failed. Username or Password wrong.", "red");
             throw e;
         }
@@ -37,7 +36,8 @@ const Login = ({handleLogin}) => {
                 history.push(location?.state?.from || '/');
             }
         })();
-    }, [])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []) // Only run on mount
 
     return (
         <div className="h-screen overflow-hidden flex items-center justify-center bg-black">

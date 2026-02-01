@@ -40,6 +40,15 @@ func ReadModPackRequest(w http.ResponseWriter, r *http.Request) (err error, pack
 	vars := mux.Vars(r)
 	modPackName = vars["modpack"]
 
+	// Validate modpack name to prevent path traversal
+	modPackName, err = ValidatePathComponent(modPackName)
+	if err != nil {
+		resp = fmt.Sprintf("Invalid modpack name: %s", err)
+		log.Println(resp)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	packMap, resp, err = CreateNewModPackMap(w)
 	if err != nil {
 		return

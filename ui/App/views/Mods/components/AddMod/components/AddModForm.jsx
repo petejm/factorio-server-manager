@@ -55,12 +55,12 @@ const AddModForm = ({setIsFactorioAuthenticated, fuse, refetchInstalledMods}) =>
             setReleases([]);
             updateSuggestedMods();
         }
-    }, [mod]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mod]); // Only re-run when mod input changes
 
     const openSelectVersionModal = async data => {
         const mod = await modsResource.portal.info(selectedMod.item.name);
         setReleases(mod.releases || [])
-        console.log(releases)
         setIsModalOpen(true)
     }
 

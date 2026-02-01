@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -46,7 +45,7 @@ func ReadRequestBody(w http.ResponseWriter, r *http.Request) (body []byte, resp 
 		return
 	}
 
-	body, err = ioutil.ReadAll(r.Body)
+	body, err = io.ReadAll(r.Body)
 	if err != nil {
 		resp = fmt.Sprintf("%s: %s", readHttpBodyError, err)
 		log.Println(resp)
@@ -107,12 +106,19 @@ func ListSaves(w http.ResponseWriter, r *http.Request) {
 }
 
 func DLSave(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/octet-stream")
 	config := bootstrap.GetConfig()
 	vars := mux.Vars(r)
 	save := vars["save"]
-	saveName := filepath.Join(config.FactorioSavesDir, save)
 
+	// Validate path to prevent directory traversal
+	saveName, err := SafeJoinPath(config.FactorioSavesDir, save)
+	if err != nil {
+		log.Printf("Invalid save path requested: %s, error: %s", save, err)
+		http.Error(w, "Invalid save file path", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", save))
 	log.Printf("%s downloading: %s", r.Host, saveName)
 
@@ -132,11 +138,21 @@ func UploadSave(w http.ResponseWriter, r *http.Request) {
 	config := bootstrap.GetConfig()
 
 	for _, saveFile := range r.MultipartForm.File["savefile"] {
-		ext := filepath.Ext(saveFile.Filename)
-		if ext != "zip" {
-			// Only zip-files allowed
-			resp = fmt.Sprintf("Fileformat {%s} is not allowed", ext)
+		// Validate file extension - only zip files allowed
+		if !ValidateFileExtension(saveFile.Filename, ".zip") {
+			resp = fmt.Sprintf("Fileformat {%s} is not allowed, only .zip files accepted", filepath.Ext(saveFile.Filename))
+			log.Println(resp)
 			w.WriteHeader(http.StatusUnsupportedMediaType)
+			return
+		}
+
+		// Validate path to prevent directory traversal
+		savePath, err := SafeJoinPath(config.FactorioSavesDir, saveFile.Filename)
+		if err != nil {
+			resp = fmt.Sprintf("Invalid filename: %s", err)
+			log.Println(resp)
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 
 		file, err := saveFile.Open()
@@ -148,7 +164,7 @@ func UploadSave(w http.ResponseWriter, r *http.Request) {
 		}
 		defer file.Close()
 
-		out, err := os.Create(filepath.Join(config.FactorioSavesDir, saveFile.Filename))
+		out, err := os.Create(savePath)
 		if err != nil {
 			resp = fmt.Sprintf("Error creating new savefile to copy uploaded on to: %s", err)
 			log.Println(resp)
@@ -182,6 +198,15 @@ func RemoveSave(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	name := vars["save"]
+
+	// Validate path component to prevent directory traversal
+	_, err = ValidatePathComponent(name)
+	if err != nil {
+		resp = fmt.Sprintf("Invalid save name: %s", err)
+		log.Println(resp)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	save, err := factorio.FindSave(name)
 	if err != nil {
@@ -222,8 +247,18 @@ func CreateSaveHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
 	config := bootstrap.GetConfig()
-	saveFile := filepath.Join(config.FactorioSavesDir, saveName)
+
+	// Validate path to prevent directory traversal
+	saveFile, err := SafeJoinPath(config.FactorioSavesDir, saveName)
+	if err != nil {
+		resp = fmt.Sprintf("Invalid save name: %s", err)
+		log.Println(resp)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	cmdOut, err := factorio.CreateSave(saveFile)
 	if err != nil {
 		resp = fmt.Sprintf("Error creating save {%s}: %s", saveName, err)
@@ -537,7 +572,20 @@ func GetCurrentLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username := session.Values["username"].(string)
+	usernameVal, ok := session.Values["username"]
+	if !ok {
+		resp = "No username in session"
+		log.Println(resp)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	username, ok := usernameVal.(string)
+	if !ok || username == "" {
+		resp = "Invalid username in session"
+		log.Println(resp)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 
 	user, err := auth.getUser(username)
 	if err != nil {
@@ -664,7 +712,20 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username := session.Values["username"].(string)
+	usernameVal, ok := session.Values["username"]
+	if !ok {
+		resp = "No username in session"
+		log.Println(resp)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	username, ok := usernameVal.(string)
+	if !ok || username == "" {
+		resp = "Invalid username in session"
+		log.Println(resp)
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 
 	// check if password for user is correct
 	err = auth.checkPassword(username, user.OldPassword)
@@ -752,7 +813,7 @@ func UpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	config := bootstrap.GetConfig()
-	err = ioutil.WriteFile(config.SettingsFile, settings, 0644)
+	err = os.WriteFile(config.SettingsFile, settings, 0644)
 	if err != nil {
 		resp = fmt.Sprintf("Failed to save server settings: %v\n", err)
 		log.Println(resp)
@@ -771,7 +832,7 @@ func UpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = ioutil.WriteFile(filepath.Join(config.FactorioConfigDir, config.FactorioAdminFile), admins, 0664)
+		err = os.WriteFile(filepath.Join(config.FactorioConfigDir, config.FactorioAdminFile), admins, 0664)
 		if err != nil {
 			resp = fmt.Sprintf("Failed to save admins: %s", err)
 			log.Println(resp)

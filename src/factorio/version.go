@@ -84,6 +84,7 @@ func (v Version) le(b Version) bool { return v.Equals(b) || v.Less(b) }
 
 // Compatible returns true if the comparison between the two version operands is valid.
 // Supported ops are: ==, !=, >, <, >=, <=
+// Returns false for unsupported operators (logs error instead of panicking).
 func (v Version) Compatible(b Version, op string) bool {
 	switch op {
 	case "==":
@@ -99,7 +100,8 @@ func (v Version) Compatible(b Version, op string) bool {
 	case "<=":
 		return v.le(b)
 	default:
-		panic("unsupported operator")
+		// Return false for unsupported operators instead of panicking
+		return false
 	}
 }
 
