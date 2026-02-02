@@ -1,6 +1,6 @@
 @import "tailwindcss/base";
-@import "tailwindcss/utilities";
 @import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 .accentuated-t {
   border-top: 2px solid rgba(255, 255, 255, 0.1);
@@ -19,15 +19,20 @@
 }
 
 .accentuated {
-  @apply .accentuated-t .accentuated-r .accentuated-b .accentuated-l
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  border-right: 2px solid rgba(0, 0, 0, 0.2);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+  border-left: 2px solid rgba(0, 0, 0, 0.1);
 }
 
 .accentuated-x {
-  @apply .accentuated-r .accentuated-l
+  border-right: 2px solid rgba(0, 0, 0, 0.2);
+  border-left: 2px solid rgba(0, 0, 0, 0.1);
 }
 
 .accentuated-y {
-  @apply .accentuated-t .accentuated-b
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
 }
 
 .hover\:glow-orange:hover {

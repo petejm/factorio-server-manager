@@ -103,7 +103,7 @@ const Mods = ({serverStatus}) => {
             .then(fetchInstalledMods)
     }
 
-    let disabled = serverStatus.status !== "stopped"
+    let disabled = serverStatus.running
 
     return (
         <div>
@@ -123,7 +123,7 @@ const Mods = ({serverStatus}) => {
                     <Tab title="Upload Mod">
                         <UploadMod refetchInstalledMods={fetchInstalledMods}/>
                     </Tab>
-                    <Tab title="Load Mod from Save">
+                    <Tab title="Load Mods from Save">
                         <LoadMods refreshMods={fetchInstalledMods}/>
                     </Tab>
                 </TabControl>
@@ -161,9 +161,9 @@ const Mods = ({serverStatus}) => {
                 className="mb-6"
                 content={
                     modPacks.map(
-                        (pack) =>
+                        (pack, i) =>
                             <ModPack factorioVersion={factorioVersion}
-                                     key={pack.name}
+                                     key={i}
                                      modPack={pack}
                                      reloadMods={fetchInstalledMods}
                                      reloadModPacks={fetchModPacks}
