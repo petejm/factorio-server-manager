@@ -130,25 +130,35 @@ func FactorioLogin(username string, password string) (error, int) {
 		return errors.New(bodyString), resp.StatusCode
 	}
 
-	var successResponse []string
-	err = json.Unmarshal(bodyBytes, &successResponse)
-	if err != nil {
-		return err, http.StatusInternalServerError
+	// Try parsing as array first (old API format)
+	var arrayResponse []string
+	if err = json.Unmarshal(bodyBytes, &arrayResponse); err == nil && len(arrayResponse) >= 2 {
+		credentials := Credentials{
+			Username: arrayResponse[0],
+			Userkey:  arrayResponse[1],
+		}
+		if err = credentials.Save(); err != nil {
+			return err, http.StatusInternalServerError
+		}
+		return nil, http.StatusOK
 	}
 
-	if len(successResponse) < 2 {
-		return errors.New("unexpected response format from auth API"), http.StatusInternalServerError
+	// Try parsing as object (new API format)
+	var objectResponse struct {
+		Token   string `json:"token"`
+		Username string `json:"username"`
+	}
+	if err = json.Unmarshal(bodyBytes, &objectResponse); err == nil && objectResponse.Token != "" {
+		credentials := Credentials{
+			Username: objectResponse.Username,
+			Userkey:  objectResponse.Token,
+		}
+		if err = credentials.Save(); err != nil {
+			return err, http.StatusInternalServerError
+		}
+		return nil, http.StatusOK
 	}
 
-	credentials := Credentials{
-		Username: successResponse[0],
-		Userkey:  successResponse[1],
-	}
-
-	err = credentials.Save()
-	if err != nil {
-		return err, http.StatusInternalServerError
-	}
-
-	return nil, http.StatusOK
+	log.Printf("Unexpected auth response format: %s", bodyString)
+	return errors.New("unexpected response format from auth API"), http.StatusInternalServerError
 }
