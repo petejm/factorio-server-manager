@@ -98,6 +98,11 @@ func (modInfoList *ModInfoList) listInstalledMods() error {
 					continue
 				}
 
+				if len(parts) < 3 {
+					log.Printf("skipping dependency '%s' in '%s': incomplete format\n", dep, modInfo.Name)
+					continue
+				}
+
 				op = parts[1]
 
 				if err := base.UnmarshalText([]byte(parts[2])); err != nil {

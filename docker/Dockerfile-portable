@@ -1,0 +1,63 @@
+# Multi-stage build for maximum CPU compatibility
+# Stage 1: Build the Go binary with CGO for baseline x86-64
+FROM golang:1.21-bookworm AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libc6-dev \
+    nodejs \
+    npm \
+    zip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy source code
+COPY . .
+
+# Build frontend
+RUN npm install && npm run build
+
+# Build backend with CGO for baseline x86-64 compatibility
+# Using -march=x86-64 ensures compatibility with all 64-bit x86 processors
+WORKDIR /build/src
+ENV CGO_ENABLED=1 \
+    GOOS=linux \
+    GOARCH=amd64 \
+    CC="gcc" \
+    CGO_CFLAGS="-O2 -march=x86-64 -mtune=generic" \
+    CGO_LDFLAGS=""
+
+# Build with baseline x86-64 for maximum compatibility
+RUN go build -ldflags="-s -w" -o /build/factorio-server-manager .
+
+# Stage 2: Runtime image
+FROM ubuntu:22.04
+
+ENV FACTORIO_VERSION=stable \
+    RCON_PASS=""
+
+VOLUME /opt/fsm-data /opt/factorio/saves /opt/factorio/mods /opt/factorio/config
+
+EXPOSE 80/tcp 34197/udp
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    tar \
+    xz-utils \
+    jq \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/fsm
+
+# Copy built binary and frontend
+COPY --from=builder /build/factorio-server-manager /opt/fsm/factorio-server-manager
+COPY --from=builder /build/app /opt/fsm/app
+COPY conf.json.example /opt/fsm/conf.json
+COPY docker/entrypoint.sh /opt/entrypoint.sh
+
+RUN chmod +x /opt/fsm/factorio-server-manager /opt/entrypoint.sh
+
+ENTRYPOINT ["/opt/entrypoint.sh"]

@@ -136,9 +136,13 @@ func FactorioLogin(username string, password string) (error, int) {
 		return err, http.StatusInternalServerError
 	}
 
+	if len(successResponse) < 2 {
+		return errors.New("unexpected response format from auth API"), http.StatusInternalServerError
+	}
+
 	credentials := Credentials{
-		Username: username,
-		Userkey:  successResponse[0],
+		Username: successResponse[0],
+		Userkey:  successResponse[1],
 	}
 
 	err = credentials.Save()

@@ -307,7 +307,7 @@ func (h SaveHeader) readStats(r io.Reader) (stats map[byte][]map[uint16]uint32, 
 		if err != nil {
 			return nil, fmt.Errorf("read stat %d force id: %v", i, err)
 		}
-		id := scratch[1]
+		id := scratch[0]
 		for j := 0; j < 3; j++ {
 			st := make(map[uint16]uint32)
 			_, err = r.Read(scratch[:4])

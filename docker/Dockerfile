@@ -9,7 +9,7 @@ VOLUME /opt/fsm-data /opt/factorio/saves /opt/factorio/mods /opt/factorio/config
 
 EXPOSE 80/tcp 34197/udp
 
-RUN apt-get update && apt-get install -y curl tar xz unzip jq && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y curl tar xz-utils unzip jq && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt
 
@@ -18,7 +18,8 @@ RUN curl --location "https://github.com/OpenFactorioServerManager/factorio-serve
          --output /tmp/factorio-server-manager-linux_${MANAGER_VERSION}.zip \
     && unzip /tmp/factorio-server-manager-linux_${MANAGER_VERSION}.zip \
     && rm /tmp/factorio-server-manager-linux_${MANAGER_VERSION}.zip \
-    && mv factorio-server-manager fsm
+    && mv factorio-server-manager fsm \
+    && chmod +x /opt/fsm/factorio-server-manager
 
 COPY ./entrypoint.sh /opt/entrypoint.sh
 

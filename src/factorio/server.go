@@ -158,6 +158,10 @@ func NewFactorioServer() (err error) {
 
 	reg := regexp.MustCompile("Version.*?((\\d+\\.)?(\\d+\\.)?(\\*|\\d+)+)")
 	found := reg.FindStringSubmatch(string(out))
+	if len(found) < 2 {
+		log.Printf("could not find version in output: %s", string(out))
+		return
+	}
 	err = server.Version.UnmarshalText([]byte(found[1]))
 	if err != nil {
 		log.Printf("could not parse version: %v", err)
