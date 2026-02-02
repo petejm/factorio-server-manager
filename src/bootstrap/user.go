@@ -16,9 +16,9 @@ import (
 
 type User struct {
 	gorm.Model
-	Username string `json:"username",gorm:"uniqueIndex,not null"`
-	Password string `json:"password",gorm:"not null"`
-	Role     string `json:"role",gorm:"not null"`
+	Username string `json:"username" gorm:"uniqueIndex,not null"`
+	Password string `json:"password" gorm:"not null"`
+	Role     string `json:"role" gorm:"not null"`
 	Email    string `json:"email"`
 }
 

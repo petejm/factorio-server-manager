@@ -23,26 +23,24 @@ type LoginSuccessResponse struct {
 }
 
 func DeleteAllMods() error {
-	var err error
 	config := bootstrap.GetConfig()
-	modsDirInfo, err := os.Stat(config.FactorioModsDir)
+
+	// Read directory contents instead of removing the directory itself
+	// This is necessary because the mods directory may be a Docker volume mount
+	entries, err := os.ReadDir(config.FactorioModsDir)
 	if err != nil {
-		log.Printf("error getting stats of FactorioModsDir: %s", err)
+		log.Printf("error reading FactorioModsDir: %s", err)
 		return err
 	}
 
-	modsDirPerm := modsDirInfo.Mode().Perm()
-
-	err = os.RemoveAll(config.FactorioModsDir)
-	if err != nil {
-		log.Printf("removing FactorioModsDir failed: %s", err)
-		return err
-	}
-
-	err = os.Mkdir(config.FactorioModsDir, modsDirPerm)
-	if err != nil {
-		log.Printf("error recreating modPackDir: %s", err)
-		return err
+	// Delete each entry inside the mods directory
+	for _, entry := range entries {
+		entryPath := filepath.Join(config.FactorioModsDir, entry.Name())
+		err = os.RemoveAll(entryPath)
+		if err != nil {
+			log.Printf("error removing %s: %s", entryPath, err)
+			return err
+		}
 	}
 
 	return nil

@@ -180,6 +180,17 @@ func ModPortalInstallMultipleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("InstallMultiple: received %d mods to install", len(data))
+	for i, mod := range data {
+		log.Printf("  [%d] %s @ %s", i, mod.Name, mod.Version)
+	}
+
+	if len(data) == 0 {
+		log.Println("InstallMultiple: no mods to install")
+		resp = []interface{}{}
+		return
+	}
+
 	modList, resp, err := CreateNewMods(w)
 	if err != nil {
 		return
@@ -215,10 +226,108 @@ func ModPortalInstallMultipleHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if !found {
-			log.Printf("Error downloading mod {%s}, error: %s", details.Name, "version not found")
+			resp = fmt.Sprintf("Error downloading mod {%s}: version %s not found on mod portal", details.Name, datum.Version)
+			log.Println(resp)
 			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	}
 
+	log.Printf("Successfully installed %d mods", len(data))
+	resp = modList.ListInstalledMods()
+}
+
+// ModPortalInstallByNameHandler installs mods by name, using the latest compatible version
+func ModPortalInstallByNameHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+	var resp interface{}
+
+	defer func() {
+		WriteResponse(w, resp)
+	}()
+
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+
+	var data []struct {
+		Name    string `json:"name"`
+		Enabled bool   `json:"enabled"`
+	}
+	resp, err = ReadFromRequestBody(w, r, &data)
+	if err != nil {
+		return
+	}
+
+	// Filter to only enabled mods
+	var enabledMods []string
+	for _, mod := range data {
+		if mod.Enabled && mod.Name != "base" && mod.Name != "elevated-rails" && mod.Name != "quality" && mod.Name != "space-age" {
+			enabledMods = append(enabledMods, mod.Name)
+		}
+	}
+
+	log.Printf("InstallByName: received %d mods (%d enabled, excluding base game mods)", len(data), len(enabledMods))
+
+	if len(enabledMods) == 0 {
+		log.Println("InstallByName: no mods to install")
+		resp = []interface{}{}
+		return
+	}
+
+	modList, resp, err := CreateNewMods(w)
+	if err != nil {
+		return
+	}
+
+	server := factorio.GetFactorioServer()
+	installedBaseVersion := factorio.Version{}
+	if err := installedBaseVersion.UnmarshalText([]byte(server.BaseModVersion)); err != nil {
+		log.Printf("error parsing base mod version: %s", err)
+	}
+
+	installedCount := 0
+	for _, modName := range enabledMods {
+		details, err, statusCode := factorio.ModPortalModDetails(modName)
+		if err != nil || statusCode != http.StatusOK {
+			log.Printf("Warning: could not get details for mod %s: %v", modName, err)
+			continue // Skip mods we can't find instead of failing entirely
+		}
+
+		// Find the latest compatible release
+		var bestRelease *struct {
+			DownloadURL string
+			FileName    string
+			Version     factorio.Version
+		}
+		for _, release := range details.Releases {
+			if release.Compatibility {
+				if bestRelease == nil || release.Version.Greater(bestRelease.Version) {
+					bestRelease = &struct {
+						DownloadURL string
+						FileName    string
+						Version     factorio.Version
+					}{
+						DownloadURL: release.DownloadURL,
+						FileName:    release.FileName,
+						Version:     release.Version,
+					}
+				}
+			}
+		}
+
+		if bestRelease == nil {
+			log.Printf("Warning: no compatible version found for mod %s", modName)
+			continue
+		}
+
+		log.Printf("Installing %s @ %s", modName, bestRelease.Version)
+		err = modList.DownloadMod(bestRelease.DownloadURL, bestRelease.FileName, modName)
+		if err != nil {
+			log.Printf("Warning: error downloading mod %s: %s", modName, err)
+			continue
+		}
+		installedCount++
+	}
+
+	log.Printf("Successfully installed %d of %d mods", installedCount, len(enabledMods))
 	resp = modList.ListInstalledMods()
 }

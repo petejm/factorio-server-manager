@@ -210,6 +210,15 @@ func (h *SaveHeader) ReadFrom(r io.Reader) (err error) {
 		}
 	}
 
+	// Factorio 2.0+ has additional fields before the mods list
+	// These appear to be: 2 bool flags + 1 uint32 (or similar structure)
+	if !h.FactorioVersion.Less(Version{2, 0, 0, 0}) {
+		_, err = r.Read(scratch[:6])
+		if err != nil {
+			return fmt.Errorf("read Factorio 2.0 extra fields: %v", err)
+		}
+	}
+
 	var n uint32
 	if atLeast016 {
 		n, err = readOptimUint(r, Version(h.FactorioVersion), 32)

@@ -315,6 +315,12 @@ var apiRoutes = Routes{
 		"/mods/portal/install/multiple",
 		ModPortalInstallMultipleHandler,
 		true,
+	}, {
+		"ModPortalInstallByName",
+		"POST",
+		"/mods/portal/install/byname",
+		ModPortalInstallByNameHandler,
+		true,
 	},
 	// Mods Stuff
 	{

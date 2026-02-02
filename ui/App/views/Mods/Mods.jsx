@@ -8,6 +8,7 @@ import Tab from "../../components/Tabs/Tab";
 import AddMod from "./components/AddMod/AddMod";
 import UploadMod from "./components/UploadMod";
 import LoadMods from "./components/LoadMods";
+import LoadModsFromList from "./components/LoadModsFromList";
 import Fuse from "fuse.js";
 import CreateModPack from "./components/CreateModPack";
 import ModPack from "./components/ModPack";
@@ -125,6 +126,9 @@ const Mods = ({serverStatus}) => {
                     </Tab>
                     <Tab title="Load Mods from Save">
                         <LoadMods refreshMods={fetchInstalledMods}/>
+                    </Tab>
+                    <Tab title="Load Mods from List">
+                        <LoadModsFromList refreshMods={fetchInstalledMods}/>
                     </Tab>
                 </TabControl>
             }
