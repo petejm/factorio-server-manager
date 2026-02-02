@@ -107,9 +107,33 @@ func ModPortalModDetails(modId string) (ModPortalStruct, error, int) {
 }
 
 //Log the user into factorio, so mods can be downloaded
+// Accepts either a password (for auth API) or a token directly (from player-data.json)
 func FactorioLogin(username string, password string) (error, int) {
 	var err error
 
+	// If "password" looks like a token (hex string, typically 30 chars), use it directly
+	// This allows users to paste their token from ~/.factorio/player-data.json
+	isLikelyToken := len(password) >= 20 && len(password) <= 40
+	for _, c := range password {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			isLikelyToken = false
+			break
+		}
+	}
+
+	if isLikelyToken {
+		log.Printf("Password looks like a token, saving directly as credentials")
+		credentials := Credentials{
+			Username: username,
+			Userkey:  password,
+		}
+		if err = credentials.Save(); err != nil {
+			return err, http.StatusInternalServerError
+		}
+		return nil, http.StatusOK
+	}
+
+	// Otherwise, try the auth API with username/password
 	resp, err := http.PostForm("https://auth.factorio.com/api-login",
 		url.Values{"require_game_ownership": {"true"}, "username": {username}, "password": {password}})
 
