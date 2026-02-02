@@ -53,9 +53,15 @@ const Controls = ({serverStatus}) => {
         setIsLoadingGameInfo(true);
         try {
             const info = await server.gameInfo();
-            setGameInfo(info);
+            // Check if response contains an error
+            if (info?.error) {
+                setGameInfo({ error: info.error });
+            } else {
+                setGameInfo(info);
+            }
         } catch (err) {
             console.error('Failed to fetch game info:', err);
+            setGameInfo({ error: 'RCON not ready' });
         } finally {
             setIsLoadingGameInfo(false);
         }
@@ -72,14 +78,12 @@ const Controls = ({serverStatus}) => {
             });
     }, [])
 
-    // Fetch game info when server starts running
+    // Clear game info when server stops
     useEffect(() => {
-        if (serverStatus.status === 'running') {
-            fetchGameInfo();
-        } else {
+        if (serverStatus.status !== 'running') {
             setGameInfo(null);
         }
-    }, [serverStatus.status, fetchGameInfo])
+    }, [serverStatus.status])
 
     return (
         <>
@@ -179,24 +183,34 @@ const Controls = ({serverStatus}) => {
             <Panel
                 title="Game Info"
                 content={
-                    <div className="lg:flex">
-                        <div className="lg:w-1/4 mb-2">
-                            <div className="font-bold">Players Online</div>
-                            <div>{isLoadingGameInfo ? 'Loading...' : (gameInfo?.player_count || 'N/A')}</div>
+                    isLoadingGameInfo ? (
+                        <div className="text-gray-400">Loading game info...</div>
+                    ) : gameInfo?.error ? (
+                        <div className="text-yellow-500">
+                            {String(gameInfo.error)} - Click Refresh to retry
                         </div>
-                        <div className="lg:w-1/4 mb-2">
-                            <div className="font-bold">Game Time</div>
-                            <div>{isLoadingGameInfo ? 'Loading...' : (gameInfo?.game_time || 'N/A')}</div>
+                    ) : !gameInfo ? (
+                        <div className="text-gray-400">Click Refresh to load game info</div>
+                    ) : (
+                        <div className="lg:flex">
+                            <div className="lg:w-1/4 mb-2">
+                                <div className="font-bold">Players Online</div>
+                                <div>{String(gameInfo.player_count || 'N/A')}</div>
+                            </div>
+                            <div className="lg:w-1/4 mb-2">
+                                <div className="font-bold">Game Time</div>
+                                <div>{String(gameInfo.game_time || 'N/A')}</div>
+                            </div>
+                            <div className="lg:w-1/4 mb-2">
+                                <div className="font-bold">Evolution</div>
+                                <div>{String(gameInfo.evolution || 'N/A')}</div>
+                            </div>
+                            <div className="lg:w-1/4 mb-2">
+                                <div className="font-bold">Map Seed</div>
+                                <div className="text-sm break-all">{String(gameInfo.seed || 'N/A')}</div>
+                            </div>
                         </div>
-                        <div className="lg:w-1/4 mb-2">
-                            <div className="font-bold">Evolution</div>
-                            <div>{isLoadingGameInfo ? 'Loading...' : (gameInfo?.evolution || 'N/A')}</div>
-                        </div>
-                        <div className="lg:w-1/4 mb-2">
-                            <div className="font-bold">Map Seed</div>
-                            <div className="text-sm break-all">{isLoadingGameInfo ? 'Loading...' : (gameInfo?.seed || 'N/A')}</div>
-                        </div>
-                    </div>
+                    )
                 }
                 actions={
                     <Button
