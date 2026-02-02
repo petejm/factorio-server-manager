@@ -7,6 +7,7 @@ import Controls from "./views/Controls";
 import {BrowserRouter, Outlet} from "react-router-dom";
 import Logs from "./views/Logs";
 import Saves from "./views/Saves/Saves";
+import Backups from "./views/Backups";
 import Layout from "./components/Layout";
 import server from "../api/resources/server";
 import Mods from "./views/Mods/Mods";
@@ -72,6 +73,7 @@ const App = () => {
                     <Route element={<Layout handleLogout={handleLogout} serverStatus={serverStatus} />}>
                         <Route index element={<Controls serverStatus={serverStatus}/>}/>
                         <Route path="saves" element={<Saves serverStatus={serverStatus}/>}/>
+                        <Route path="backups" element={<Backups serverStatus={serverStatus}/>}/>
                         <Route path="mods" element={<Mods serverStatus={serverStatus}/>}/>
                         <Route path="server-settings" element={<ServerSettings serverStatus={serverStatus}/>}/>
                         <Route path="game-settings" element={<GameSettings serverStatus={serverStatus}/>}/>

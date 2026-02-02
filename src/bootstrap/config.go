@@ -54,6 +54,8 @@ type Config struct {
 	CookieEncryptionKey     string `json:"cookie_encryption_key,omitempty"`
 	SettingsFile            string `json:"settings_file,omitempty"`
 	LogFile                 string `json:"log_file,omitempty"`
+	BackupDir               string `json:"backup_dir,omitempty"`
+	BackupRetentionCount    int    `json:"backup_retention_count,omitempty"`
 	ConfFile                string `json:"-"`
 	GlibcCustom             string `json:"-"`
 	GlibcLocation           string `json:"-"`
@@ -65,8 +67,9 @@ type Config struct {
 
 // set Configs default values. JSON unmarshal will replace when it found something different
 var instantiated = Config{
-	ConsoleCacheSize: 25,
-	Secure:           true,
+	ConsoleCacheSize:     25,
+	Secure:               true,
+	BackupRetentionCount: 10,
 }
 
 func NewConfig(args []string) Config {
@@ -204,6 +207,7 @@ func (config *Config) mapFlags(flags Flags) {
 	config.FactorioSavesDir = filepath.Join(flags.FactorioDir, "saves")
 	config.FactorioModsDir = filepath.Join(flags.FactorioDir, "mods")
 	config.FactorioModPackDir = flags.ModPackDir
+	config.BackupDir = filepath.Join(flags.FactorioDir, "backups")
 	config.FactorioConfigDir = filepath.Join(flags.FactorioDir, "config")
 	config.FactorioConfigFile = filepath.Join(flags.FactorioDir, flags.FactorioConfigFile)
 	config.FactorioCredentialsFile = "./factorio.auth"

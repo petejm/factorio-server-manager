@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
+	"github.com/OpenFactorioServerManager/factorio-server-manager/scheduler"
 	"github.com/gorilla/sessions"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/glebarez/sqlite"
@@ -28,6 +29,11 @@ var (
 	sessionStore *sessions.CookieStore
 	auth         Auth
 )
+
+// GetDB returns the shared database connection for use by other packages
+func GetDB() *gorm.DB {
+	return auth.db
+}
 
 func SetupAuth() {
 	var err error
@@ -54,7 +60,7 @@ func SetupAuth() {
 		panic(err)
 	}
 
-	err = auth.db.AutoMigrate(&User{})
+	err = auth.db.AutoMigrate(&User{}, &scheduler.Backup{}, &scheduler.Schedule{})
 	if err != nil {
 		log.Printf("Error AutoMigrating gorm database: %s", err)
 		panic(err)

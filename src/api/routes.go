@@ -132,6 +132,10 @@ func NewRouter() *mux.Router {
 		Methods("GET").
 		Name("Help").
 		Handler(http.StripPrefix("/help", http.FileServer(http.Dir("./app/"))))
+	sr.Path("/backups").
+		Methods("GET").
+		Name("Backups").
+		Handler(http.StripPrefix("/backups", http.FileServer(http.Dir("./app/"))))
 
 	// catch all route
 	r.PathPrefix("/").
@@ -452,6 +456,44 @@ var apiRoutes = Routes{
 		"POST",
 		"/mods/packs/{modpack}/portal/install/multiple",
 		ModPackModPortalInstallMultipleHandler,
+		false,
+	},
+	// Backup routes
+	{
+		"ListBackups",
+		"GET",
+		"/backups/list",
+		ListBackups,
+		false,
+	}, {
+		"CreateBackup",
+		"POST",
+		"/backups/create",
+		CreateBackupHandler,
+		false,
+	}, {
+		"RestoreBackup",
+		"POST",
+		"/backups/restore/{id}",
+		RestoreBackupHandler,
+		true,
+	}, {
+		"DeleteBackup",
+		"DELETE",
+		"/backups/{id}",
+		DeleteBackupHandler,
+		false,
+	}, {
+		"DownloadBackup",
+		"GET",
+		"/backups/download/{id}",
+		DownloadBackupHandler,
+		false,
+	}, {
+		"VerifyBackup",
+		"GET",
+		"/backups/verify/{id}",
+		VerifyBackupHandler,
 		false,
 	},
 }
