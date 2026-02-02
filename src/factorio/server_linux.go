@@ -11,7 +11,13 @@ import (
 // Stubs for windows-only functions
 
 func (server *Server) Kill() error {
-	err := server.Cmd.Process.Signal(os.Kill)
+	cmd := server.GetCmd()
+	if cmd == nil || cmd.Process == nil {
+		log.Printf("No process to kill")
+		return nil
+	}
+
+	err := cmd.Process.Signal(os.Kill)
 	if err != nil {
 		if err.Error() == "os: process already finished" {
 			server.SetRunning(false)
@@ -23,16 +29,26 @@ func (server *Server) Kill() error {
 	server.SetRunning(false)
 	log.Printf("Sent SIGKILL to Factorio process. Factorio forced to exit.")
 
-	err = server.Rcon.Close()
-	if err != nil {
-		log.Printf("Error close rcon connection: %s", err)
+	rc := server.GetRcon()
+	if rc != nil {
+		err = rc.Close()
+		if err != nil {
+			log.Printf("Error close rcon connection: %s", err)
+		}
+		server.SetRcon(nil)
 	}
 
 	return nil
 }
 
 func (server *Server) Stop() error {
-	err := server.Cmd.Process.Signal(os.Interrupt)
+	cmd := server.GetCmd()
+	if cmd == nil || cmd.Process == nil {
+		log.Printf("No process to stop")
+		return nil
+	}
+
+	err := cmd.Process.Signal(os.Interrupt)
 	if err != nil {
 		if err.Error() == "os: process already finished" {
 			server.SetRunning(false)
@@ -43,9 +59,13 @@ func (server *Server) Stop() error {
 	}
 	log.Printf("Sent SIGINT to Factorio process. Factorio shutting down...")
 
-	err = server.Rcon.Close()
-	if err != nil {
-		log.Printf("Error close rcon connection: %s", err)
+	rc := server.GetRcon()
+	if rc != nil {
+		err = rc.Close()
+		if err != nil {
+			log.Printf("Error close rcon connection: %s", err)
+		}
+		server.SetRcon(nil)
 	}
 
 	return nil

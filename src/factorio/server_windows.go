@@ -43,7 +43,13 @@ func setCtrlHandlingIsDisabledForThisProcess(disabled bool) {
 }
 
 func (server *Server) Kill() error {
-	err := server.Cmd.Process.Signal(os.Kill)
+	cmd := server.GetCmd()
+	if cmd == nil || cmd.Process == nil {
+		log.Printf("No process to kill")
+		return nil
+	}
+
+	err := cmd.Process.Signal(os.Kill)
 	if err != nil {
 		if err.Error() == "os: process already finished" {
 			server.SetRunning(false)
@@ -59,6 +65,12 @@ func (server *Server) Kill() error {
 }
 
 func (server *Server) Stop() error {
+	cmd := server.GetCmd()
+	if cmd == nil || cmd.Process == nil {
+		log.Printf("No process to stop")
+		return nil
+	}
+
 	// Disable our own handling of CTRL+C, so we don't close when we send it to the console.
 	setCtrlHandlingIsDisabledForThisProcess(true)
 
@@ -72,7 +84,7 @@ func (server *Server) Stop() error {
 	// to inject filesystem logic into what should be a process-level Stop() routine), so our best option
 	// is to just wait an arbitrary amount of time and hope that the save is successful in that time.
 	time.Sleep(2 * time.Second)
-	server.Cmd.Process.Signal(os.Kill)
+	cmd.Process.Signal(os.Kill)
 
 	// Re-enable handling of CTRL+C after we're sure that the factrio server is shut down.
 	setCtrlHandlingIsDisabledForThisProcess(false)

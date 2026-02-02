@@ -10,14 +10,12 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
 	"github.com/OpenFactorioServerManager/factorio-server-manager/factorio"
-	"github.com/gorilla/sessions"
-
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 )
 
 const readHttpBodyError = "Could not read the Request Body."
@@ -446,11 +444,16 @@ func CheckServer(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	var server = factorio.GetFactorioServer()
+
+	// Always include version for consistency with WebSocket status messages
+	resp["fac_version"] = server.Version.String()
+
 	if server.GetRunning() {
 		resp["status"] = "running"
-		resp["port"] = strconv.Itoa(server.Port)
-		resp["savefile"] = server.Savefile
-		resp["bindip"] = server.BindIP
+		port, savefile, bindIP := server.GetServerInfo()
+		resp["port"] = strconv.Itoa(port)
+		resp["savefile"] = savefile
+		resp["bindip"] = bindIP
 	} else {
 		resp["status"] = "stopped"
 	}
@@ -765,7 +768,7 @@ func GetServerSettings(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 	var server = factorio.GetFactorioServer()
-	resp = server.Settings
+	resp = server.GetSettings()
 
 	log.Printf("Sent server settings response")
 }
@@ -786,18 +789,8 @@ func UpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received settings JSON: %s", body)
 	var server = factorio.GetFactorioServer()
 
-	// Race Condition while unmarshal possible
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go func() {
-		err = json.Unmarshal(body, &server.Settings)
-		wg.Done()
-	}()
-
-	// Wait for unmarshal to avoid race condition
-	wg.Wait()
-
+	// Update settings using thread-safe accessor method
+	err = server.UpdateSettings(body)
 	if err != nil {
 		resp = fmt.Sprintf("Error unmarhaling server settings JSON: %s", err)
 		log.Println(resp)
@@ -805,7 +798,9 @@ func UpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settings, err := json.MarshalIndent(&server.Settings, "", "  ")
+	// Get a copy of settings for marshaling
+	currentSettings := server.GetSettings()
+	settings, err := json.MarshalIndent(currentSettings, "", "  ")
 	if err != nil {
 		resp = fmt.Sprintf("Failed to marshal server settings: %s", err)
 		log.Println(resp)
@@ -825,7 +820,7 @@ func UpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 
 	if (server.Version.Greater(factorio.Version{0, 17, 0})) {
 		// save admins to adminJson
-		admins, err := json.MarshalIndent(server.Settings["admins"], "", "  ")
+		admins, err := json.MarshalIndent(currentSettings["admins"], "", "  ")
 		if err != nil {
 			resp = fmt.Sprintf("Failed to marshal admins-Setting: %s", err)
 			log.Println(resp)

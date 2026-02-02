@@ -187,6 +187,7 @@ func ModUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Try to find and return the updated mod info
 	installedMods := mods.ListInstalledMods().ModsResult
 	for _, mod := range installedMods {
 		if mod.Name == modData.Name {
@@ -195,9 +196,14 @@ func ModUpdateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp = fmt.Sprintf(`Could not find mod %s`, modData.Name)
-	log.Println(resp)
-	w.WriteHeader(http.StatusNotFound)
+	// Update succeeded but mod not found in list (may be due to concurrent operations)
+	// Return success with basic info rather than 404
+	log.Printf("Mod %s updated successfully but not found in refreshed list", modData.Name)
+	resp = map[string]string{
+		"name":    modData.Name,
+		"status":  "updated",
+		"message": "Mod updated successfully",
+	}
 	return
 }
 

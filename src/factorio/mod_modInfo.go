@@ -52,7 +52,7 @@ func (modInfoList *ModInfoList) listInstalledMods() error {
 
 			err = FileLock.RLock(path)
 			if err != nil && err == lockfile.ErrorAlreadyLocked {
-				log.Println(err)
+				// File is being written by another operation, skip it silently
 				return nil
 			} else if err != nil {
 				log.Printf("error locking file: %s", err)
@@ -146,7 +146,7 @@ func (modInfoList *ModInfoList) deleteMod(modName string) error {
 			FileLock.LockW(filePath)
 			//delete mod
 			err = os.Remove(filePath)
-			FileLock.Unlock(filePath)
+			FileLock.Unlock(filePath) // Unlock immediately after operation
 			if err != nil {
 				log.Printf("ModInfoList ... error when deleting mod: %s", err)
 				return err
@@ -212,22 +212,25 @@ func (modInfoList *ModInfoList) createMod(modName string, fileName string, modFi
 		log.Printf("error on creating new file - %s: %s", fileName, err)
 		return err
 	}
-	defer newFile.Close()
 
 	FileLock.LockW(filePath)
 
 	_, err = io.Copy(newFile, modFile)
 	if err != nil {
+		FileLock.Unlock(filePath)
+		newFile.Close()
 		log.Printf("error on copying file to disk: %s", err)
 		return err
 	}
 
 	err = newFile.Close()
 	if err != nil {
+		FileLock.Unlock(filePath)
 		log.Printf("error on closing new created zip-file: %s", err)
 		return err
 	}
 
+	// Release lock before listing so listInstalledMods can read this file
 	FileLock.Unlock(filePath)
 
 	//reload the list

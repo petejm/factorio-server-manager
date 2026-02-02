@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 		"--mod-dir", os.Getenv("mod_dir"),
 	})
 
-	factorio.SetFactorioServer(factorio.Server{
+	factorio.SetFactorioServer(&factorio.Server{
 		Version:        factorio.Version{1, 1, 6, 0},
 		BaseModVersion: "1.1.6",
 	})
@@ -531,13 +531,13 @@ func Test_018_10_Compatibility(t *testing.T) {
 	var err error
 
 	// set test environment to verson 1.0.0
-	factorio.SetFactorioServer(factorio.Server{
+	factorio.SetFactorioServer(&factorio.Server{
 		Version:        factorio.Version{1, 0, 0, 0},
 		BaseModVersion: "1.0.0",
 	})
 
 	// when done reset the environment to what it should be
-	defer factorio.SetFactorioServer(factorio.Server{
+	defer factorio.SetFactorioServer(&factorio.Server{
 		Version:        factorio.Version{1, 1, 6, 0},
 		BaseModVersion: "1.1.6",
 	})

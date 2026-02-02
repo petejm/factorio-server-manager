@@ -1,15 +1,22 @@
 # Glibc is required for Factorio Server binaries to run
-FROM ubuntu
+FROM ubuntu:22.04
 
 ENV FACTORIO_VERSION=stable \
-    MANAGER_VERSION=0.10.1 \
+    MANAGER_VERSION=0.26.412 \
     RCON_PASS=""
 
 VOLUME /opt/fsm-data /opt/factorio/saves /opt/factorio/mods /opt/factorio/config
 
 EXPOSE 80/tcp 34197/udp
 
-RUN apt-get update && apt-get install -y curl tar xz-utils unzip jq && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    curl \
+    tar \
+    xz-utils \
+    unzip \
+    jq \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt
 

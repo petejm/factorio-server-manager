@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"reflect"
+	"sync"
 
 	"github.com/OpenFactorioServerManager/factorio-server-manager/bootstrap"
 )
@@ -9,7 +10,9 @@ import (
 // the hub, that is exported and can be used anywhere to work with the websocket
 var WebsocketHub *wsHub
 
+// LogCache stores recent log lines for new clients joining the gamelog room
 var LogCache []string
+var logCacheMu sync.RWMutex
 
 // a controlHandler is used to determine, if something has to be done, on a specific command.
 // register a handler with `wsHub.RegisterControlHandler`
@@ -51,6 +54,9 @@ type wsRoom struct {
 
 	// send a message to all clients in this room
 	send chan wsMessage
+
+	// done signals shutdown for graceful termination
+	done chan struct{}
 }
 
 // Hub is the basic setup of the server.
@@ -62,6 +68,9 @@ type wsHub struct {
 
 	// Messages that should be sent to ALL clients
 	broadcast chan wsMessage
+
+	// mu protects rooms map for concurrent access
+	mu sync.RWMutex
 
 	// a list of all rooms
 	rooms map[string]*wsRoom
@@ -75,6 +84,9 @@ type wsHub struct {
 	// run a control message on all registered controlHandler
 	runControl chan WsControls
 
+	// controlMu protects controlHandlers map for concurrent access
+	controlMu sync.RWMutex
+
 	// list of all registered controlHandlers
 	controlHandlers map[reflect.Value]controlHandler
 
@@ -83,6 +95,9 @@ type wsHub struct {
 
 	// unregister a controlHandler
 	UnregisterControlHandler chan controlHandler
+
+	// done signals shutdown for graceful termination
+	done chan struct{}
 }
 
 // initialize and run the mein websocket hub.
@@ -97,6 +112,7 @@ func init() {
 		controlHandlers:          make(map[reflect.Value]controlHandler),
 		RegisterControlHandler:   make(chan controlHandler),
 		UnregisterControlHandler: make(chan controlHandler),
+		done:                     make(chan struct{}),
 	}
 
 	go WebsocketHub.run()
@@ -115,6 +131,8 @@ func (hub *wsHub) removeClient(client *wsClient) {
 func (hub *wsHub) run() {
 	for {
 		select {
+		case <-hub.done:
+			return
 		case client := <-hub.register:
 			hub.clients[client] = true
 		case client := <-hub.unregister:
@@ -130,11 +148,36 @@ func (hub *wsHub) run() {
 				}
 			}
 		case function := <-hub.RegisterControlHandler:
+			hub.controlMu.Lock()
 			hub.controlHandlers[reflect.ValueOf(function)] = function
+			hub.controlMu.Unlock()
 		case function := <-hub.UnregisterControlHandler:
+			hub.controlMu.Lock()
 			delete(hub.controlHandlers, reflect.ValueOf(function))
+			hub.controlMu.Unlock()
 		}
 	}
+}
+
+// Shutdown gracefully stops the hub and all rooms
+func (hub *wsHub) Shutdown() {
+	close(hub.done)
+	hub.mu.RLock()
+	for _, room := range hub.rooms {
+		close(room.done)
+	}
+	hub.mu.RUnlock()
+}
+
+// GetControlHandlers returns a copy of control handlers for safe iteration
+func (hub *wsHub) GetControlHandlers() []controlHandler {
+	hub.controlMu.RLock()
+	defer hub.controlMu.RUnlock()
+	handlers := make([]controlHandler, 0, len(hub.controlHandlers))
+	for _, handler := range hub.controlHandlers {
+		handlers = append(handlers, handler)
+	}
+	return handlers
 }
 
 // Broadcast a message to all connected clients (only clients connected to this room).
@@ -148,52 +191,60 @@ func (hub *wsHub) Broadcast(message interface{}) {
 // get a websocket room or create it, if it doesn't exist yet.
 // Also starts the rooms subroutine `wsRoom.run()`
 func (hub *wsHub) GetRoom(name string) *wsRoom {
+	// First try read lock for common case (room exists)
+	hub.mu.RLock()
 	if room, ok := hub.rooms[name]; ok {
-		return room
-	} else {
-		room := &wsRoom{
-			name:       name,
-			clients:    make(map[*wsClient]bool),
-			register:   make(chan *wsClient),
-			unregister: make(chan *wsClient),
-			send:       make(chan wsMessage),
-		}
-		hub.rooms[name] = room
-		go room.run()
+		hub.mu.RUnlock()
 		return room
 	}
+	hub.mu.RUnlock()
+
+	// Room doesn't exist, need write lock to create
+	hub.mu.Lock()
+	defer hub.mu.Unlock()
+
+	// Double-check after acquiring write lock
+	if room, ok := hub.rooms[name]; ok {
+		return room
+	}
+
+	room := &wsRoom{
+		name:       name,
+		clients:    make(map[*wsClient]bool),
+		register:   make(chan *wsClient),
+		unregister: make(chan *wsClient),
+		send:       make(chan wsMessage),
+		done:       make(chan struct{}),
+	}
+	hub.rooms[name] = room
+	go room.run()
+	return room
 }
 
 // run starts a websocket room. This has to be run as a subroutine `go room.run()`
 func (room *wsRoom) run() {
 	for {
 		select {
+		case <-room.done:
+			return
 		case client := <-room.register:
 			room.clients[client] = true
 
 			// some hardcoded stuff for gamelog room
 			if room.name == "gamelog" {
 				// send cached log to registered client
+				logCacheMu.RLock()
 				for _, logLine := range LogCache {
 					client.send <- wsMessage{
 						RoomName: "gamelog",
 						Message:  logLine,
 					}
 				}
+				logCacheMu.RUnlock()
 			}
 		case client := <-room.unregister:
 			if _, ok := room.clients[client]; ok {
 				delete(room.clients, client)
-				// FIXME when more rooms are used, remove empty rooms.
-				// Since we only have a few rooms at the same time, just keep them.
-				// This is code, that will cause a concurrent call on `wsHub.rooms`.
-				// To fix this, move the deletion into the hub.
-				// Be careful to think about race conditions, if a user registered to the room, before room was really deleted.
-				//if len(room.clients) == 0 {
-				//	//remove this room
-				//	delete(room.hub.rooms, room.name)
-				//	return
-				//}
 			}
 		case message := <-room.send:
 			for client := range room.clients {
@@ -206,13 +257,17 @@ func (room *wsRoom) run() {
 
 			// some hardcoded stuff for gamelog room
 			if room.name == "gamelog" {
-				// add the line to the cache
-				LogCache = append(LogCache, message.Message.(string))
-				config := bootstrap.GetConfig()
+				// add the line to the cache with safe type assertion
+				if logLine, ok := message.Message.(string); ok {
+					logCacheMu.Lock()
+					LogCache = append(LogCache, logLine)
+					config := bootstrap.GetConfig()
 
-				// When cache is bigger than max size, delete one line
-				if len(LogCache) > config.ConsoleCacheSize {
-					LogCache = LogCache[1:]
+					// When cache is bigger than max size, delete one line
+					if len(LogCache) > config.ConsoleCacheSize {
+						LogCache = LogCache[1:]
+					}
+					logCacheMu.Unlock()
 				}
 			}
 		}

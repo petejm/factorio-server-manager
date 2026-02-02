@@ -20,13 +20,14 @@ import (
 )
 
 type Server struct {
+	// mu protects all mutable fields accessed by multiple goroutines
+	mu             sync.RWMutex           `json:"-"`
 	Cmd            *exec.Cmd              `json:"-"`
 	Savefile       string                 `json:"savefile"`
 	Latency        int                    `json:"latency"`
 	BindIP         string                 `json:"bindip"`
 	Port           int                    `json:"port"`
 	running        bool
-	runningMux     sync.RWMutex           `json:"-"`
 	Version        Version                `json:"fac_version"`
 	BaseModVersion string                 `json:"base_mod_version"`
 	StdOut         io.ReadCloser          `json:"-"`
@@ -37,12 +38,12 @@ type Server struct {
 	LogChan        chan []string          `json:"-"`
 }
 
-var instantiated Server
+var instantiated *Server
 var once sync.Once
 
 func (server *Server) SetRunning(newState bool) {
-	server.runningMux.Lock()
-	defer server.runningMux.Unlock()
+	server.mu.Lock()
+	defer server.mu.Unlock()
 
 	if server.running != newState {
 		log.Println("new state, will also send to correct room")
@@ -71,9 +72,72 @@ func (server *Server) SetRunning(newState bool) {
 }
 
 func (server *Server) GetRunning() bool {
-	server.runningMux.RLock()
-	defer server.runningMux.RUnlock()
+	server.mu.RLock()
+	defer server.mu.RUnlock()
 	return server.running
+}
+
+// GetRcon returns the RCON connection safely
+func (server *Server) GetRcon() *rcon.RemoteConsole {
+	server.mu.RLock()
+	defer server.mu.RUnlock()
+	return server.Rcon
+}
+
+// SetRcon sets the RCON connection safely
+func (server *Server) SetRcon(rc *rcon.RemoteConsole) {
+	server.mu.Lock()
+	defer server.mu.Unlock()
+	server.Rcon = rc
+}
+
+// GetSettings returns a copy of the settings map safely
+func (server *Server) GetSettings() map[string]interface{} {
+	server.mu.RLock()
+	defer server.mu.RUnlock()
+	// Return a shallow copy to prevent external mutation
+	settings := make(map[string]interface{})
+	for k, v := range server.Settings {
+		settings[k] = v
+	}
+	return settings
+}
+
+// SetSettings replaces the settings map safely
+func (server *Server) SetSettings(settings map[string]interface{}) {
+	server.mu.Lock()
+	defer server.mu.Unlock()
+	server.Settings = settings
+}
+
+// UpdateSettings updates settings from JSON safely
+func (server *Server) UpdateSettings(data []byte) error {
+	server.mu.Lock()
+	defer server.mu.Unlock()
+	return json.Unmarshal(data, &server.Settings)
+}
+
+// GetServerInfo returns server status info safely
+func (server *Server) GetServerInfo() (port int, savefile, bindIP string) {
+	server.mu.RLock()
+	defer server.mu.RUnlock()
+	return server.Port, server.Savefile, server.BindIP
+}
+
+// SetServerInfo sets server connection info safely
+func (server *Server) SetServerInfo(port int, savefile, bindIP string) {
+	server.mu.Lock()
+	defer server.mu.Unlock()
+	server.Port = port
+	server.Savefile = savefile
+	server.BindIP = bindIP
+}
+
+// GetCmd returns the command safely
+func (server *Server) GetCmd() *exec.Cmd {
+	server.mu.RLock()
+	defer server.mu.RUnlock()
+	return server.Cmd
 }
 
 func (server *Server) autostart() {
@@ -96,12 +160,12 @@ func (server *Server) autostart() {
 
 }
 
-func SetFactorioServer(server Server) {
+func SetFactorioServer(server *Server) {
 	instantiated = server
 }
 
 func NewFactorioServer() (err error) {
-	server := Server{}
+	server := &Server{}
 	server.Settings = make(map[string]interface{})
 	config := bootstrap.GetConfig()
 	if err = os.MkdirAll(config.FactorioConfigDir, 0755); err != nil {
@@ -243,8 +307,8 @@ func NewFactorioServer() (err error) {
 	return
 }
 
-func GetFactorioServer() (f *Server) {
-	return &instantiated
+func GetFactorioServer() *Server {
+	return instantiated
 }
 
 func (server *Server) Run() error {
@@ -436,7 +500,13 @@ func serverWebsocketControl(controls websocket.WsControls) {
 		if server.GetRunning() {
 			log.Printf("Received command: %v", command)
 
-			reqId, err := server.Rcon.Write(command)
+			rc := server.GetRcon()
+			if rc == nil {
+				log.Printf("RCON not connected, cannot send command")
+				return
+			}
+
+			reqId, err := rc.Write(command)
 			if err != nil {
 				log.Printf("Error sending rcon command: %s", err)
 				return

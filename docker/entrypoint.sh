@@ -1,11 +1,12 @@
 #!/bin/sh
+set -eu
 
 init_config() {
     jq_cmd='.'
 
-    if [ -n "$RCON_PASS" ]; then
+    if [ -n "${RCON_PASS:-}" ]; then
       jq_cmd="${jq_cmd} | .rcon_pass = \"$RCON_PASS\""
-      echo "Factorio rcon password is '$RCON_PASS'"
+      echo "Factorio rcon password configured"
     fi
 
     jq_cmd="${jq_cmd} | .sq_lite_database_file = \"/opt/fsm-data/sqlite.db\""
@@ -53,5 +54,6 @@ else
     echo "Factorio already installed, skipping download"
 fi
 
-cd /opt/fsm && ./factorio-server-manager --conf /opt/fsm-data/conf.json --dir /opt/factorio --port 80
+cd /opt/fsm
+exec ./factorio-server-manager --conf /opt/fsm-data/conf.json --dir /opt/factorio --port 80
 

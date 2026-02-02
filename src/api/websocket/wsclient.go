@@ -101,7 +101,9 @@ func (client *wsClient) readPump() {
 					room := client.hub.GetRoom(message.Controls.Value)
 					room.unregister <- client
 				default:
-					for _, handler := range client.hub.controlHandlers {
+					// Get a copy of handlers to avoid race condition
+					handlers := client.hub.GetControlHandlers()
+					for _, handler := range handlers {
 						go handler(message.Controls)
 					}
 				}

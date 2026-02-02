@@ -16,6 +16,7 @@ type RateLimiter struct {
 	limiters map[string]*visitorLimiter
 	rate     rate.Limit
 	burst    int
+	done     chan struct{}
 }
 
 type visitorLimiter struct {
@@ -40,6 +41,7 @@ func NewRateLimiter(r rate.Limit, burst int) *RateLimiter {
 		limiters: make(map[string]*visitorLimiter),
 		rate:     r,
 		burst:    burst,
+		done:     make(chan struct{}),
 	}
 }
 
@@ -64,9 +66,19 @@ func (rl *RateLimiter) cleanupLoop() {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		rl.cleanup()
+	for {
+		select {
+		case <-rl.done:
+			return
+		case <-ticker.C:
+			rl.cleanup()
+		}
 	}
+}
+
+// Shutdown stops the cleanup goroutine
+func (rl *RateLimiter) Shutdown() {
+	close(rl.done)
 }
 
 // cleanup removes entries that haven't been seen in over 3 minutes
