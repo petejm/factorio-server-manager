@@ -450,7 +450,7 @@ func CheckServer(w http.ResponseWriter, r *http.Request) {
 		resp["status"] = "running"
 		resp["port"] = strconv.Itoa(server.Port)
 		resp["savefile"] = server.Savefile
-		resp["address"] = server.BindIP
+		resp["bindip"] = server.BindIP
 	} else {
 		resp["status"] = "stopped"
 	}

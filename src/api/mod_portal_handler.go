@@ -196,9 +196,17 @@ func ModPortalInstallMultipleHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Built-in mods that aren't on the mod portal
+	builtinMods := map[string]bool{
+		"base":           true,
+		"elevated-rails": true,
+		"quality":        true,
+		"space-age":      true,
+	}
+
 	for _, datum := range data {
-		// skip base mod because it is already included in factorio
-		if datum.Name == "base" {
+		// skip built-in mods (base game and DLC)
+		if builtinMods[datum.Name] {
 			continue
 		}
 		details, err, statusCode := factorio.ModPortalModDetails(datum.Name)

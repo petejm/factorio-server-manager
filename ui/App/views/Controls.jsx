@@ -39,7 +39,7 @@ const Controls = ({serverStatus}) => {
             .then(res => {
                 setSaves(res);
                 if (res.length > 0) {
-                    setIsDisabled(undefined);
+                    setIsDisabled(false);
                 }
                 reset();
             });
@@ -51,11 +51,11 @@ const Controls = ({serverStatus}) => {
             title="Server Status"
             content={
                 <div className="lg:flex">
-                    { serverStatus.running
+                    { serverStatus.status === 'running'
                         ? <>
                             <div className="lg:w-1/5 mb-2">
                                 <div className="font-bold">Status</div>
-                                <div>{serverStatus.running ? 'Running' : 'Stopped'}</div>
+                                <div>{serverStatus.status === 'running' ? 'Running' : 'Stopped'}</div>
                             </div>
                             <div className="lg:w-1/5 mb-2">
                                 <div className="font-bold">IP</div>
@@ -77,7 +77,7 @@ const Controls = ({serverStatus}) => {
                         : <>
                             <div className="lg:w-1/5 mb-2">
                                 <div className="font-bold">Status</div>
-                                <div>{serverStatus.running ? 'Running' : 'Stopped'}</div>
+                                <div>{serverStatus.status === 'running' ? 'Running' : 'Stopped'}</div>
                             </div>
                             <div className="lg:w-1/5 mb-2 mr-0 lg:mr-4">
                                 <div className="font-bold">IP</div>
@@ -125,7 +125,7 @@ const Controls = ({serverStatus}) => {
             }
             actions={
                 <div className="md:flex">
-                    {serverStatus.running
+                    {serverStatus.status === 'running'
                         ? <>
                             <Button onClick={stopServer} isLoading={isStopping} isDisabled={isKilling} size="sm" className="w-full md:w-auto mb-2 md:mb-0 md:mr-2" type="default">Save & Stop Server</Button>
                             <Button onClick={killServer} isLoading={isKilling} isDisabled={isStopping} size="sm" type="danger" className="w-full md:w-auto">Kill Server</Button>
