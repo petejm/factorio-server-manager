@@ -24,5 +24,9 @@ export default {
     kill: async () => {
         const response = await client.get('/api/server/kill');
         return response.data;
+    },
+    gameInfo: async () => {
+        const response = await client.get('/api/server/gameinfo');
+        return response.data;
     }
 }

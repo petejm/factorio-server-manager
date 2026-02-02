@@ -837,3 +837,84 @@ func UpdateServerSettings(w http.ResponseWriter, r *http.Request) {
 
 	resp = fmt.Sprintf("Settings successfully saved")
 }
+
+// executeRconCommand sends a command via RCON and reads the response
+func executeRconCommand(server *factorio.Server, command string) (string, error) {
+	rc := server.GetRcon()
+	if rc == nil {
+		return "", errors.New("RCON not connected")
+	}
+
+	_, err := rc.Write(command)
+	if err != nil {
+		return "", err
+	}
+
+	response, _, err := rc.Read()
+	if err != nil {
+		return "", err
+	}
+
+	return response, nil
+}
+
+// GameInfo returns player count and map time via RCON
+func GameInfo(w http.ResponseWriter, r *http.Request) {
+	resp := map[string]interface{}{}
+
+	defer func() {
+		WriteResponse(w, resp)
+	}()
+
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	var server = factorio.GetFactorioServer()
+
+	if !server.GetRunning() {
+		resp["error"] = "Server is not running"
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+
+	rc := server.GetRcon()
+	if rc == nil {
+		resp["error"] = "RCON not connected"
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+
+	// Get player count
+	playerResp, err := executeRconCommand(server, "/players online count")
+	if err != nil {
+		log.Printf("Error getting player count: %s", err)
+		resp["player_count"] = "unknown"
+	} else {
+		resp["player_count"] = playerResp
+	}
+
+	// Get game time
+	timeResp, err := executeRconCommand(server, "/time")
+	if err != nil {
+		log.Printf("Error getting game time: %s", err)
+		resp["game_time"] = "unknown"
+	} else {
+		resp["game_time"] = timeResp
+	}
+
+	// Get evolution factor
+	evoResp, err := executeRconCommand(server, "/evolution")
+	if err != nil {
+		log.Printf("Error getting evolution: %s", err)
+		resp["evolution"] = "unknown"
+	} else {
+		resp["evolution"] = evoResp
+	}
+
+	// Get seed
+	seedResp, err := executeRconCommand(server, "/seed")
+	if err != nil {
+		log.Printf("Error getting seed: %s", err)
+		resp["seed"] = "unknown"
+	} else {
+		resp["seed"] = seedResp
+	}
+}

@@ -224,6 +224,12 @@ var apiRoutes = Routes{
 		FactorioVersion,
 		false,
 	}, {
+		"GameInfo",
+		"GET",
+		"/server/gameinfo",
+		GameInfo,
+		false,
+	}, {
 		"LogoutUser",
 		"GET",
 		"/logout",

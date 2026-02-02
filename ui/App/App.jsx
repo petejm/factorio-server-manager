@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 
 import user from "../api/resources/user";
 import Login from "./views/Login";
@@ -17,6 +17,7 @@ import Console from "./views/Console";
 import Help from "./views/Help";
 import socket from "../api/socket";
 import {Flash} from "./components/Flash";
+import Bus from "../notifications";
 
 
 const App = () => {
@@ -34,6 +35,15 @@ const App = () => {
             socket.emit('server status subscribe');
             socket.on('server_status', status => {
                 setServerStatus(JSON.parse(status));
+            });
+
+            // Subscribe to server errors for real-time notifications
+            socket.emit('server errors subscribe');
+            socket.on('server_errors', errorMsg => {
+                Bus.emit('flash', {
+                    message: `Server Error: ${errorMsg}`,
+                    color: 'red'
+                });
             });
         }
     },[]);

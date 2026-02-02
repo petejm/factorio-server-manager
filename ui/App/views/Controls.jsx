@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useState, useCallback} from "react";
 import Panel from "../components/Panel";
 import Button from "../components/Button";
 import server from "../../api/resources/server";
@@ -16,6 +16,8 @@ const Controls = ({serverStatus}) => {
     const [isStopping, setIsStopping] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
     const [isKilling, setIsKilling] = useState(false);
+    const [gameInfo, setGameInfo] = useState(null);
+    const [isLoadingGameInfo, setIsLoadingGameInfo] = useState(false);
 
     const { handleSubmit, reset, register, formState: {errors} } = useForm();
 
@@ -46,6 +48,19 @@ const Controls = ({serverStatus}) => {
         }
     }
 
+    const fetchGameInfo = useCallback(async () => {
+        if (serverStatus.status !== 'running') return;
+        setIsLoadingGameInfo(true);
+        try {
+            const info = await server.gameInfo();
+            setGameInfo(info);
+        } catch (err) {
+            console.error('Failed to fetch game info:', err);
+        } finally {
+            setIsLoadingGameInfo(false);
+        }
+    }, [serverStatus.status]);
+
     useEffect(() => {
         savesResource.list(true)
             .then(res => {
@@ -57,7 +72,17 @@ const Controls = ({serverStatus}) => {
             });
     }, [])
 
+    // Fetch game info when server starts running
+    useEffect(() => {
+        if (serverStatus.status === 'running') {
+            fetchGameInfo();
+        } else {
+            setGameInfo(null);
+        }
+    }, [serverStatus.status, fetchGameInfo])
+
     return (
+        <>
         <form onSubmit={handleSubmit(startServer)}>
         <Panel
             title="Server Status"
@@ -148,6 +173,45 @@ const Controls = ({serverStatus}) => {
             }
         />
         </form>
+
+        {/* Game Info Panel - only shown when server is running */}
+        {serverStatus.status === 'running' && (
+            <Panel
+                title="Game Info"
+                content={
+                    <div className="lg:flex">
+                        <div className="lg:w-1/4 mb-2">
+                            <div className="font-bold">Players Online</div>
+                            <div>{isLoadingGameInfo ? 'Loading...' : (gameInfo?.player_count || 'N/A')}</div>
+                        </div>
+                        <div className="lg:w-1/4 mb-2">
+                            <div className="font-bold">Game Time</div>
+                            <div>{isLoadingGameInfo ? 'Loading...' : (gameInfo?.game_time || 'N/A')}</div>
+                        </div>
+                        <div className="lg:w-1/4 mb-2">
+                            <div className="font-bold">Evolution</div>
+                            <div>{isLoadingGameInfo ? 'Loading...' : (gameInfo?.evolution || 'N/A')}</div>
+                        </div>
+                        <div className="lg:w-1/4 mb-2">
+                            <div className="font-bold">Map Seed</div>
+                            <div className="text-sm break-all">{isLoadingGameInfo ? 'Loading...' : (gameInfo?.seed || 'N/A')}</div>
+                        </div>
+                    </div>
+                }
+                actions={
+                    <Button
+                        onClick={fetchGameInfo}
+                        isLoading={isLoadingGameInfo}
+                        size="sm"
+                        type="default"
+                        className="w-full md:w-auto"
+                    >
+                        Refresh
+                    </Button>
+                }
+            />
+        )}
+    </>
     )
 };
 
