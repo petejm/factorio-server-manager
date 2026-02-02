@@ -1,14 +1,11 @@
-# Multi-stage build for maximum CPU compatibility
-# Stage 1: Build the Go binary with CGO for baseline x86-64
+# Multi-stage build - no CGO required (pure Go SQLite)
+# Stage 1: Build the Go binary
 FROM golang:1.21-bookworm AS builder
 
-# Install build dependencies
+# Install build dependencies (only need nodejs/npm for frontend)
 RUN apt-get update && apt-get install -y \
-    gcc \
-    libc6-dev \
     nodejs \
     npm \
-    zip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
@@ -19,17 +16,12 @@ COPY . .
 # Build frontend
 RUN npm install && npm run build
 
-# Build backend with CGO for baseline x86-64 compatibility
-# Using -march=x86-64 ensures compatibility with all 64-bit x86 processors
+# Build backend - no CGO needed
 WORKDIR /build/src
-ENV CGO_ENABLED=1 \
+ENV CGO_ENABLED=0 \
     GOOS=linux \
-    GOARCH=amd64 \
-    CC="gcc" \
-    CGO_CFLAGS="-O2 -march=x86-64 -mtune=generic" \
-    CGO_LDFLAGS=""
+    GOARCH=amd64
 
-# Build with baseline x86-64 for maximum compatibility
 RUN go build -ldflags="-s -w" -o /build/factorio-server-manager .
 
 # Stage 2: Runtime image

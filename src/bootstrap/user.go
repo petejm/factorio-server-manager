@@ -10,7 +10,7 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
