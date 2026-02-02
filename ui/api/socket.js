@@ -94,6 +94,8 @@ function connect() {
 
     socket.onopen = e => {
         registerEventEmitter(socket)
+        // Auto-subscribe to server_status on every connection
+        serverStatusSubscribeEvent();
     }
 }
 

@@ -3,6 +3,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.26.412] - 2026-02-01
+### Added
+- **Factorio 2.0 save file support** - Updated save file parser to handle new Factorio 2.0 header format (6 extra bytes)
+- **Load Mods from List** - New feature to upload mod-list.json and install all mods from it
+- **Real-time server status via WebSocket** - Server status now updates automatically without page refresh
+- **Auto-subscribe to server status** - WebSocket automatically subscribes to status updates on connect
+
+### Changed
+- **Broad CPU compatibility** - Binaries now built with GOAMD64=v1 for older x86-64 processors (no AVX-512 required)
+- **Improved Docker entrypoint** - Better error handling for Factorio download/extraction
+- **Factorio download caching** - Only downloads Factorio if not already present in volume
+
+### Fixed
+- **Server status not updating in UI** - Fixed WebSocket to send proper JSON status instead of notification string
+- **WebSocket connection failures** - Fixed origin checking for same-host WebSocket connections
+- **Race condition in server status** - Added mutex protection for server running state
+- **Delete all mods on Docker volumes** - Fixed "device or resource busy" error by deleting contents instead of directory
+- **DLC mods causing 403 errors** - Skip built-in mods (base, elevated-rails, quality, space-age) when loading from save
+- **Frontend status property mismatch** - Fixed `serverStatus.running` vs `serverStatus.status === 'running'` inconsistency
+- **Loading spinner not stopping** - Added try/finally blocks to reset loading states in Controls.jsx
+
+### Security
+- **CSRF protection** - Added CSRF token validation for all state-changing requests
+- **Session security** - Improved cookie security with HttpOnly, SameSite, and Secure flags
+- **Rate limiting** - Added rate limiting on login endpoint to prevent brute force attacks
+- **WebSocket origin validation** - Validate origin header matches host to prevent CSWSH attacks
+
 ## [0.10.1] - 2021-03-09
 ### Fixed
 - Single admin user can no longer be deleted (so there is always a user)

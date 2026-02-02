@@ -20,6 +20,24 @@ This tool runs on a Factorio server and allows management of the Factorio server
 ## Compatibility
 * **Factorio 1.x and 2.0+** - Full support for both Factorio 1.x and 2.0 save file formats
 * The save file parser has been updated to handle the new Factorio 2.0 save header format
+* **Broad CPU support** - Binaries are built with GOAMD64=v1 for compatibility with older x86-64 processors (no AVX-512 required)
+
+## Quick Start (Docker)
+
+```bash
+docker pull petejm/ofsm:dev && docker run -d \
+  --name factorio-server-manager \
+  -p 9090:80 \
+  -v /path/to/factorio:/opt/factorio \
+  -v /path/to/fsm-data:/opt/fsm/data \
+  petejm/ofsm:dev
+```
+
+Access the web UI at `http://your-server:9090`. Default credentials are displayed in the container logs on first run.
+
+### Environment Variables
+* `FACTORIO_VERSION` - Factorio version to download (default: `latest`)
+* `RCON_PASS` - RCON password for server communication
 
 #### Manage Factorio Server
 ![Factorio Server Manager Screenshot](screenshots/Screenshot_Controls.png)

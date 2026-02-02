@@ -26,6 +26,22 @@ const (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  4096,
 	WriteBufferSize: 4096,
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true // Allow non-browser clients (no Origin header)
+		}
+		// For browser clients, allow if origin matches the host
+		// This prevents CSRF attacks while allowing legitimate connections
+		host := r.Host
+		// Extract host from origin (e.g., "http://192.168.1.12:9090" -> "192.168.1.12:9090")
+		if len(origin) > 7 && origin[:7] == "http://" {
+			origin = origin[7:]
+		} else if len(origin) > 8 && origin[:8] == "https://" {
+			origin = origin[8:]
+		}
+		return origin == host
+	},
 }
 
 // The websocket client, that is the middleman between a websocket connection and the hub.

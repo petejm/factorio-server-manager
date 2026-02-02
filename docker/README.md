@@ -78,6 +78,26 @@ After container starts, latest Factorio version will be downloaded and installed
 
 Authentication is supported in the application, but it is recommended to ensure access to the Factorio manager UI is accessible via VPN or internal network.
 
+## Quick Start (Development Image)
+
+For testing the latest development features:
+
+```bash
+docker pull petejm/ofsm:dev && docker run -d \
+  --name factorio-server-manager \
+  -p 9090:80 \
+  -v /path/to/factorio:/opt/factorio \
+  -v /path/to/fsm-data:/opt/fsm/data \
+  petejm/ofsm:dev
+```
+
+## CPU Compatibility
+
+The binaries are built with `GOAMD64=v1` for maximum CPU compatibility. This means:
+- Works on older x86-64 processors without AVX-512 support
+- Compatible with AMD EPYC (Zen 1+), Intel Xeon, and most server CPUs
+- No special CPU features required
+
 ## Development
 For development purposes it also has the ability to create the docker image from local sourcecode. This is done by running `build.sh` in the `docker` directory. This will delete all old executables and the node_modules directory (runs `make build`). The created docker image will have the tag `factorio-server-manager:dev`.
 

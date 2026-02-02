@@ -1,6 +1,6 @@
 {
   "name": "factorio-mod-manager",
-  "version": "0.2.0",
+  "version": "0.26.412",
   "description": "Factorio Server Manager UI",
   "main": "ui/index.js",
   "scripts": {

@@ -26,6 +26,7 @@ type Server struct {
 	BindIP         string                 `json:"bindip"`
 	Port           int                    `json:"port"`
 	running        bool
+	runningMux     sync.RWMutex           `json:"-"`
 	Version        Version                `json:"fac_version"`
 	BaseModVersion string                 `json:"base_mod_version"`
 	StdOut         io.ReadCloser          `json:"-"`
@@ -40,15 +41,38 @@ var instantiated Server
 var once sync.Once
 
 func (server *Server) SetRunning(newState bool) {
+	server.runningMux.Lock()
+	defer server.runningMux.Unlock()
+
 	if server.running != newState {
 		log.Println("new state, will also send to correct room")
 		server.running = newState
 		wsRoom := websocket.WebsocketHub.GetRoom("server_status")
-		wsRoom.Send("Server status has changed")
+
+		// Build status object matching what CheckServer returns
+		status := map[string]string{}
+		status["fac_version"] = server.Version.String()
+		if newState {
+			status["status"] = "running"
+			status["port"] = strconv.Itoa(server.Port)
+			status["savefile"] = server.Savefile
+			status["bindip"] = server.BindIP
+		} else {
+			status["status"] = "stopped"
+		}
+
+		statusJSON, err := json.Marshal(status)
+		if err != nil {
+			log.Printf("Error marshalling server status: %s", err)
+			return
+		}
+		wsRoom.Send(string(statusJSON))
 	}
 }
 
 func (server *Server) GetRunning() bool {
+	server.runningMux.RLock()
+	defer server.runningMux.RUnlock()
 	return server.running
 }
 

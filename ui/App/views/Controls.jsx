@@ -21,17 +21,29 @@ const Controls = ({serverStatus}) => {
 
     const startServer = async (data) => {
         setIsStarting(true);
-        await server.start(data.ip, parseInt(data.port), data.save);
+        try {
+            await server.start(data.ip, parseInt(data.port), data.save);
+        } finally {
+            setIsStarting(false);
+        }
     }
 
     const stopServer = async () => {
         setIsStopping(true);
-        await server.stop();
+        try {
+            await server.stop();
+        } finally {
+            setIsStopping(false);
+        }
     }
 
     const killServer = async () => {
         setIsKilling(true);
-        await server.kill();
+        try {
+            await server.kill();
+        } finally {
+            setIsKilling(false);
+        }
     }
 
     useEffect(() => {
