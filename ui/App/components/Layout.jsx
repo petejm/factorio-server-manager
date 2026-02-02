@@ -14,10 +14,10 @@ const Layout = ({handleLogout, serverStatus}) => {
         let text = 'Unknown';
         let color = 'gray-light';
 
-        if (info && info.running) {
+        if (info && info.status === 'running') {
             text = 'Running';
             color = 'green';
-        } else if (info && !info.running) {
+        } else if (info && info.status === 'stopped') {
             text = 'Stopped';
             color = 'red';
         }
