@@ -1,0 +1,5 @@
+name: Test
+# Disabled: inherited from upstream, fails on Go 1.14/1.15 which are EOL.
+# Upstream needs to update their test matrix.
+on:
+  workflow_dispatch:
