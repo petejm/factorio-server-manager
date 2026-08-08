@@ -34,7 +34,7 @@ var upgrader = websocket.Upgrader{
 		// For browser clients, allow if origin matches the host
 		// This prevents CSRF attacks while allowing legitimate connections
 		host := r.Host
-		// Extract host from origin (e.g., "http://192.168.1.12:9090" -> "192.168.1.12:9090")
+		// Extract host from origin (e.g., "http://192.0.2.10:9090" -> "192.0.2.10:9090")
 		if len(origin) > 7 && origin[:7] == "http://" {
 			origin = origin[7:]
 		} else if len(origin) > 8 && origin[:8] == "https://" {
